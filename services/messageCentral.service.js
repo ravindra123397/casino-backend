@@ -1,53 +1,76 @@
+
 import axios from "axios";
 
-/* ================= BASE URL ================= */
-const BASE_URL = process.env.MESSAGE_CENTRAL_BASE_URL.replace(/\/$/, "");
+/* ================= GET BASE URL SAFELY ================= */
+const getBaseUrl = () => {
+  const url = process.env.MESSAGE_CENTRAL_BASE_URL;
+  if (!url) {
+    throw new Error("MessageCentral is not configured");
+  }
+  return url.replace(/\/$/, "");
+};
 
 /* ================= GENERATE TOKEN ================= */
 export const generateToken = async () => {
-  console.log("🔐 Generating MessageCentral token...");
+  const BASE_URL = getBaseUrl();
 
-  const body = new URLSearchParams({
-    customerId: process.env.MESSAGE_CENTRAL_CUSTOMER_ID,
-    key: process.env.MESSAGE_CENTRAL_KEY,           // Base64 password
-    scope: "NEW",
-    country: process.env.COUNTRY_CODE,
-    email: "lakhan1999mom@gmail.com"                 // 🔥 REQUIRED
-  });
+  console.log("🔐 Generating MessageCentral token...");
 
   const res = await axios.post(
     `${BASE_URL}/auth/v1/authentication/token`,
-    body.toString(),
+    null,
     {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        accept: "*/*"
-      }
+      params: {
+        customerId: process.env.MESSAGE_CENTRAL_CUSTOMER_ID,
+        key: process.env.MESSAGE_CENTRAL_KEY,
+        scope: "NEW",
+        country: process.env.COUNTRY_CODE,
+        email: "lakhan1999mom@gmail.com"
+      },
+      headers: { accept: "*/*" }
     }
   );
 
-  console.log("✅ TOKEN GENERATED");
   return res.data.data.authToken;
 };
 
+/* ================= SEND OTP ================= */
+export const sendOtpService = async (authToken, phone) => {
+  const BASE_URL = getBaseUrl();
 
-/* ================= VERIFY OTP ================= */
-export const verifyOtpService = async (authToken, verificationId, code) => {
-  const res = await axios.get(
-    `${BASE_URL}/verification/v3/validateOtp`,
+  const res = await axios.post(
+    `${BASE_URL}/verification/v3/send`,
+    null,
     {
-      headers: {
-        authToken
-      },
+      headers: { authToken },
       params: {
-        countryCode: process.env.COUNTRY_CODE,
         customerId: process.env.MESSAGE_CENTRAL_CUSTOMER_ID,
-        verificationId,
-        code
+        countryCode: process.env.COUNTRY_CODE,
+        flowType: "SMS",
+        mobileNumber: phone
       }
     }
   );
 
-  console.log("✅ OTP VERIFIED");
+  return res.data.data;
+};
+
+/* ================= VERIFY OTP ================= */
+export const verifyOtpService = async (authToken, verificationId, code) => {
+  const BASE_URL = getBaseUrl();
+
+  const res = await axios.post(
+    `${BASE_URL}/verification/v3/validateOtp`,
+    null,
+    {
+      headers: { authToken },
+      params: {
+        verificationId,
+        code,
+        flowType: "SMS"
+      }
+    }
+  );
+
   return res.data.data;
 };
