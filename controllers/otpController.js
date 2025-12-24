@@ -1,9 +1,8 @@
 import Otp from "../models/Otp.js";
 import {
-  generateToken,
   sendOtpService,
-  verifyOtpService
-} from "../services/messageCentral.service.js";
+  verifyOtpService,
+} from "../services/otp.service.js";
 
 /* ================= SEND OTP ================= */
 export const sendOtp = async (req, res) => {
@@ -12,44 +11,44 @@ export const sendOtp = async (req, res) => {
 
     if (!phone || !/^[0-9]{10}$/.test(phone)) {
       return res.status(400).json({
-        message: "Phone number must be 10 digits"
+        message: "Invalid phone number",
       });
     }
 
-    let record = await Otp.findOne({ phone });
+    const existingOtp = await Otp.findOne({ phone });
 
-    if (record && record.resendCount >= 3) {
-      return res.status(429).json({
-        message: "OTP resend limit exceeded"
+    // ⛔ Prevent spam – reuse OTP if valid
+    if (existingOtp && existingOtp.expiresAt > new Date()) {
+      return res.json({
+        message: "OTP already sent",
       });
     }
 
-    const authToken = await generateToken();
-    const otp = await sendOtpService(authToken, phone);
-
+    const otp = String(Math.floor(1000 + Math.random() * 9000));
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    if (!record) {
-      await Otp.create({
+    // 📲 SEND LIVE OTP
+    await sendOtpService(phone, otp);
+
+    await Otp.findOneAndUpdate(
+      { phone },
+      {
         phone,
-        verificationId: otp.verificationId,
-        authToken,
-        expiresAt
-      });
-    } else {
-      record.verificationId = otp.verificationId;
-      record.authToken = authToken;
-      record.expiresAt = expiresAt;
-      record.resendCount += 1;
-      await record.save();
-    }
+        otp,
+        expiresAt,
+        verified: false,
+        resendCount: existingOtp ? existingOtp.resendCount + 1 : 1,
+      },
+      { upsert: true, new: true }
+    );
 
-    res.json({ message: "OTP sent successfully" });
-
+    res.json({
+      message: "OTP sent successfully",
+    });
   } catch (error) {
-    console.error("SEND OTP ERROR:", error.response?.data || error.message);
+    console.error("SEND OTP ERROR:", error.message);
     res.status(500).json({
-      message: "OTP service failed"
+      message: "OTP service failed",
     });
   }
 };
@@ -61,7 +60,7 @@ export const verifyOtp = async (req, res) => {
 
     if (!phone || !code) {
       return res.status(400).json({
-        message: "Phone and OTP required"
+        message: "Phone and OTP required",
       });
     }
 
@@ -69,37 +68,30 @@ export const verifyOtp = async (req, res) => {
 
     if (!record) {
       return res.status(404).json({
-        message: "OTP not found"
+        message: "OTP not found",
       });
     }
 
     if (record.expiresAt < new Date()) {
       return res.status(400).json({
-        message: "OTP expired"
+        message: "OTP expired",
       });
     }
 
-    const verify = await verifyOtpService(
-      record.authToken,
-      record.verificationId,
-      code
-    );
-
-    if (verify.verificationStatus !== "VERIFICATION_COMPLETED") {
-      return res.status(400).json({
-        message: "Invalid OTP"
-      });
-    }
+    // ✅ Verify OTP
+    await verifyOtpService(code, record.otp);
 
     record.verified = true;
+    record.expiresAt = new Date(); // invalidate OTP
     await record.save();
 
-    res.json({ message: "OTP verified successfully" });
-
+    res.json({
+      message: "OTP verified successfully",
+    });
   } catch (error) {
-    console.error("VERIFY OTP ERROR:", error.response?.data || error.message);
-    res.status(500).json({
-      message: "OTP verification failed"
+    console.error("VERIFY OTP ERROR:", error.message);
+    res.status(400).json({
+      message: error.message || "OTP verification failed",
     });
   }
 };

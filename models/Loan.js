@@ -1,29 +1,32 @@
 import mongoose from "mongoose";
 
-const loanSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
+const loanSchema = new mongoose.Schema(
+  {
+    firstName: String,
+    lastName: String,
+    phone: { type: String, unique: true },
+    panNumber: { type: String, unique: true },
 
-  phone: { type: String, unique: true },
-  panNumber: { type: String, unique: true, uppercase: true },
+    aadhaarFront: String,
+    aadhaarBack: String,
+    panFile: String,
 
-  aadhaarFront: String,
-  aadhaarBack: String,
-  panFile: String,
+    amountRequested: Number,
+    approvedAmount: Number,
+    deduction8Percent: Number,
+    processingFee5Percent: Number,
 
-  amountRequested: Number,
+    status: {
+      type: String,
+      enum: ["PENDING", "APPROVED", "RESTART"],
+      default: "PENDING",
+    },
 
-  deduction8Percent: Number,
-  approvedAmount: Number,
-  processingFee5Percent: Number,
+    restartReasons: [String],
 
-  status: {
-    type: String,
-    enum: ["PENDING", "APPROVED"],
-    default: "PENDING"
+    userMessage: String,
   },
-
-  userMessage: String
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export default mongoose.model("Loan", loanSchema);
