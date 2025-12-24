@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import cors from "cors";
 import fileUpload from "express-fileupload";
 import connectDB from "./config/db.js";
 
@@ -11,6 +12,9 @@ import otpRoutes from "./routes/otpRoutes.js";
 import loanRoutes from "./routes/loanRoutes.js";
 
 const app = express();
+
+// ✅ CORS ENABLE
+app.use(cors());
 
 // Middleware
 app.use(express.json());
