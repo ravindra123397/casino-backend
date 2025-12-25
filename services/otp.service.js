@@ -8,7 +8,7 @@ export const sendOtpService = async (phone, otp) => {
         authorization: process.env.FAST2SMS_API_KEY,
         route: "q", // transactional
         numbers: phone,
-        message: `Your OTP is ${otp}. Valid for 5 minutes.`,
+        message: `${otp} is your one time password (OTP) for user authentication from sawariya fin Pvt`,
       },
       headers: {
         "cache-control": "no-cache",
