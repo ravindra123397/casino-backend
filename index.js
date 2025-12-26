@@ -13,23 +13,62 @@ import loanRoutes from "./routes/loanRoutes.js";
 
 const app = express();
 
-// ✅ CORS ENABLE
+/* ===============================
+   MIDDLEWARE
+================================ */
 app.use(cors());
-
-// Middleware
 app.use(express.json());
-app.use(fileUpload({ useTempFiles: true, tempFileDir: "/tmp/" }));
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: "/tmp/",
+  limits: { fileSize: 10 * 1024 * 1024 }, // ✅ 10 MB
+  abortOnLimit: true,
+}));
 
-// DB
+
+/* ===============================
+   DATABASE
+================================ */
 connectDB();
 
-// Routes
-app.use("/api/admin", adminRoutes);
+/* ===============================
+   ✅ ROOT PATH ROUTE
+   GET /
+================================ */
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "🚀 Loan API is running successfully",
+    version: "1.0.0",
+    time: new Date().toISOString(),
+  });
+});
+
+/* ===============================
+   PUBLIC ROUTES
+================================ */
 app.use("/api/otp", otpRoutes);
+
+/* ===============================
+   PROTECTED ROUTES
+================================ */
+app.use("/api/admin", adminRoutes);
 app.use("/api/loans", loanRoutes);
 
-// Server
+/* ===============================
+   404 HANDLER
+================================ */
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "❌ Route not found",
+  });
+});
+
+/* ===============================
+   SERVER
+================================ */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
