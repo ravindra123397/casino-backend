@@ -10,7 +10,7 @@ import connectDB from "./config/db.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import otpRoutes from "./routes/otpRoutes.js";
 import loanRoutes from "./routes/loanRoutes.js";
-
+import userProfileRoutes from "./routes/userProfileRoutes.js";
 const app = express();
 
 /* ===============================
@@ -54,6 +54,7 @@ app.use("/api/otp", otpRoutes);
 ================================ */
 app.use("/api/admin", adminRoutes);
 app.use("/api/loans", loanRoutes);
+app.use("/api/user", userProfileRoutes);
 
 /* ===============================
    404 HANDLER

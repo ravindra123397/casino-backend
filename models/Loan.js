@@ -4,8 +4,10 @@ const loanSchema = new mongoose.Schema(
   {
     firstName: String,
     lastName: String,
-    phone: { type: String, unique: true },
-    panNumber: { type: String, unique: true },
+
+    phone: { type: String, required: true },
+    panNumber: { type: String, required: true, uppercase: true },
+    upiId: { type: String, required: true, lowercase: true },
 
     aadhaarFront: String,
     aadhaarBack: String,
@@ -23,7 +25,6 @@ const loanSchema = new mongoose.Schema(
     },
 
     restartReasons: [String],
-
     userMessage: String,
   },
   { timestamps: true }
