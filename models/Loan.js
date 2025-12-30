@@ -8,7 +8,10 @@ const loanSchema = new mongoose.Schema(
     phone: { type: String, required: true },
     panNumber: { type: String, required: true, uppercase: true },
     upiId: { type: String, required: true, lowercase: true },
-
+    bookType: {
+      type: String,
+      required: true,
+    },
     aadhaarFront: String,
     aadhaarBack: String,
     panFile: String,

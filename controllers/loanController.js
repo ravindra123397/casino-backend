@@ -5,8 +5,16 @@ import cloudinary from "../config/cloudinary.js";
 /* ================= FILE UPLOAD ================= */
 const upload = async (file, folder) => {
   if (!file) return null;
-  const res = await cloudinary.uploader.upload(file.tempFilePath, { folder });
-  return res.secure_url;
+
+  if (!file.tempFilePath) {
+    throw new Error("❌ tempFilePath missing. File upload middleware issue.");
+  }
+
+  const result = await cloudinary.uploader.upload(file.tempFilePath, {
+    folder,
+  });
+
+  return result.secure_url;
 };
 
 /* ================= RESTART REASONS ================= */
@@ -20,9 +28,25 @@ const ALLOWED_RESTART_REASONS = [
 /* ================= APPLY LOAN ================= */
 export const applyLoan = async (req, res) => {
   try {
-    const { firstName, lastName, phone, panNumber, upiId, amount } = req.body;
+    const {
+      firstName,
+      lastName,
+      phone,
+      panNumber,
+      upiId,
+      amount,
+      bookType,
+    } = req.body;
 
-    if (!firstName || !lastName || !phone || !panNumber || !upiId || !amount) {
+    if (
+      !firstName ||
+      !lastName ||
+      !phone ||
+      !panNumber ||
+      !upiId ||
+      !amount ||
+      !bookType
+    ) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -39,7 +63,6 @@ export const applyLoan = async (req, res) => {
         success: false,
         message: "Active loan already exists",
         status: activeLoan.status,
-        data: activeLoan,
       });
     }
 
@@ -48,18 +71,22 @@ export const applyLoan = async (req, res) => {
     const aadhaarFront = req.files?.aadhaarFront
       ? await upload(req.files.aadhaarFront, "loan/aadhaar")
       : null;
+
     const aadhaarBack = req.files?.aadhaarBack
       ? await upload(req.files.aadhaarBack, "loan/aadhaar")
       : null;
+
     const panFile = req.files?.panFile
       ? await upload(req.files.panFile, "loan/pan")
       : null;
 
+    /* ===== RESTART CASE ===== */
     if (loan) {
       loan.firstName = firstName;
       loan.lastName = lastName;
       loan.panNumber = panNumber.toUpperCase();
       loan.upiId = upiId.toLowerCase();
+      loan.bookType = bookType;
       loan.amountRequested = amount;
       loan.aadhaarFront = aadhaarFront;
       loan.aadhaarBack = aadhaarBack;
@@ -68,13 +95,16 @@ export const applyLoan = async (req, res) => {
       loan.restartReasons = [];
       loan.userMessage = "Loan resubmitted. Waiting for approval.";
       await loan.save();
-    } else {
+    } 
+    /* ===== NEW LOAN ===== */
+    else {
       loan = await Loan.create({
         firstName,
         lastName,
         phone,
         panNumber: panNumber.toUpperCase(),
         upiId: upiId.toLowerCase(),
+        bookType,
         aadhaarFront,
         aadhaarBack,
         panFile,
@@ -92,6 +122,7 @@ export const applyLoan = async (req, res) => {
       data: loan,
     });
   } catch (err) {
+    console.error("🔥 APPLY LOAN ERROR:", err);
     res.status(500).json({
       success: false,
       message: "Loan apply failed",
@@ -183,6 +214,7 @@ export const approveLoan = async (req, res) => {
       phone: loan.phone,
       panNumber: loan.panNumber,
       upiId: loan.upiId,
+      bookType: loan.bookType,
       loanStatus: "APPROVED",
       loanDetails: {
         loanId: loan._id,
